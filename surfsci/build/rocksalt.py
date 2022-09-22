@@ -1,4 +1,6 @@
 # +
+from functools import partial
+
 from ase.spacegroup import crystal
 from ase import Atoms
 
@@ -14,4 +16,7 @@ def rocksalt(
         spacegroup=225,
         cellpar=(a, a, a, 90, 90, 90),
     )
-    return atoms
+    return atoms.repeat(size)
+
+
+NaCl = partial(rocksalt, a=5.6402, symbols=("Na", "Cl"))
