@@ -6,26 +6,39 @@ from ase.data import atomic_masses, atomic_names
 from ase.geometry import wrap_positions
 from lammps import lammps
 
+from surfsci.geometry.rotations import PrismRotation
+
 
 def create_atoms(lmp: lammps, atoms: Atoms) -> None:
-    """ """
+    """
+    prerequisites:
+        LAMMPS "units" must be defined before.
+
+    """
 
     units = lmp.extract_global("units")
 
-    # boundary
+    # boundary conditions
     symbol = {True: "p", False: "f"}
     boundary = " ".join([symbol[b] for b in atoms.pbc])
     lmp.command(f"boundary {boundary}")
 
+    # rotate coordinates to LAMMPS "prism" style (most generic)
+    # TODO: consider checks for simpler "block" style
+    rotation = PrismRotation(atoms.cell)
+    cell = rotation(atoms.cell)
+    positions = rotation(atoms.positions)
+    positions = wrap_positions(positions, cell, atoms.pbc)
+
+    # convert to LAMMPS distance units
+    cell = convert(cell, "distance", "ASE", units)
+    positions = convert(positions, "distance", "ASE", units)
+
     # define region
-    region_id = "region"
-    cell = convert(atoms.cell, "distance", "ASE", units)
-    if all(atoms.cell.cellpar()[3:] == 90):  # cubic
-        region = " ".join(["block"] + [f"{0} {l}" for l in cell.diagonal()])
-    else:
-        # TODO: generalize
-        raise RuntimeError("Non-cubic box is not supported yet!")
-    lmp.command(f"region {region_id} {region}")
+    region_id = "cell"
+    lower = cell.flat[[0, 4, 8, 3, 6, 7]]
+    prism = "0 {} 0 {} 0 {}  {} {} {}".format(*lower)
+    lmp.command(f"region {region_id} prism  {prism} units box")
 
     # create box
     unique = np.unique(atoms.get_atomic_numbers())  # auto-sorted
@@ -34,10 +47,14 @@ def create_atoms(lmp: lammps, atoms: Atoms) -> None:
     # create atoms
     mapping = {z: i + 1 for i, z in enumerate(unique)}
     types = list(map(mapping.get, atoms.numbers))
-    _x = convert(atoms.positions, "distance", "ASE", units)
-    x = wrap_positions(_x, cell, atoms.pbc).reshape(-1)
     lmp.create_atoms(
-        n=len(atoms), id=None, type=types, x=x, v=None, image=None, shrinkexceed=False
+        n=len(atoms),
+        id=None,
+        type=types,
+        x=positions.reshape(-1),
+        v=None,
+        image=None,
+        shrinkexceed=False,
     )
 
     # set masses
