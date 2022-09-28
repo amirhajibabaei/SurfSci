@@ -1,5 +1,5 @@
 # +
-from math import pi
+from math import pi, radians
 
 import numpy as np
 
@@ -11,8 +11,8 @@ from pymatgen.transformations.standard_transformations import (
 
 from ase import Atoms
 
-from surfsci.geometry.rotations import AxisRotation, PrismRotation
-from surfsci.geometry.equallity import locally_identical
+from ..geometry.rotations import AxisRotation, PrismRotation
+from ..geometry.equallity import locally_identical
 
 
 def right_angle_cell(atoms: Atoms) -> Atoms:
@@ -33,14 +33,15 @@ def right_angle_cell(atoms: Atoms) -> Atoms:
     """
     # i. test if the input is qualified
     assert all(atoms.pbc)
-    par = atoms.cell.cellpar()
-    if not np.allclose(par[3:], [90, 90, 60]):
-        raise RuntimeError("Only cells with 90, 90, 60 angles are supported for now!")
+    angles = atoms.cell.cellpar()[3:]
+    ang = pi / 2 - radians(angles[2])
+    if not np.allclose(angles[:2], 90) and ang > 0:
+        raise RuntimeError("Only cells with 90, 90, < 90 angles are supported for now!")
         # TODO: generalize
 
     # ii. create
     rot1 = PrismRotation(atoms.cell)
-    rot2 = AxisRotation((0, 0, 1), pi / 6)
+    rot2 = AxisRotation((0, 0, 1), ang)
     right = Atoms(
         numbers=atoms.numbers,
         positions=rot2(rot1(atoms.positions)),
