@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ase import Atoms
-from ase.build import surface
+from ase.build import surface, add_vacuum
 from ase.spacegroup import crystal
 
 from .transform import right_angle_cell
@@ -58,16 +58,21 @@ def nacl_surface(
         also be specified.
 
     """
-    atoms = surface(
+    layer = surface(
         lattice=nacl_unitcell(a),
         indices=indices,
-        layers=size[2],
+        layers=1,
         periodic=periodic,
-        vacuum=vacuum,
+        vacuum=None,
     ).repeat((*size[:2], 1))
+    atoms = layer.repeat((1, 1, size[2]))
+
     if right_angle:
         atoms = right_angle_cell(atoms)
     if h2o is not None:
         assert vacuum is not None
         atoms = append_h2o(atoms, h2o, vacuum)
+    elif vacuum is not None:
+        add_vacuum(atoms, vacuum)
+
     return atoms
