@@ -43,12 +43,23 @@ def get_nntypes(
 
 
 def locally_identical(atoms1: Atoms, atoms2: Atoms, cutoff=5.0):
+    def are_equal(x, y):
+        z1, d1 = x
+        z2, d2 = y
+        n1 = z1.shape[0]
+        n2 = z2.shape[0]
+        n = min([n1, n2])
+        if n1 != n2:
+            # This could happen due to numerical errors
+            # but the difference shouldn't be more than
+            # one particle.
+            assert abs(n1 - n2) < 2
+        return np.allclose(z1[:n], z2[:n]) and np.allclose(d1[:n], d2[:n])
+
     if (atoms1.numbers != atoms2.numbers).any():
         return False
     else:
         a, nl = get_nntypes(atoms1, cutoff=cutoff)
         b, _ = get_nntypes(atoms2, nl=nl)
-        res = all(
-            [(x[0] == y[0]).all() and np.allclose(x[1], y[1]) for x, y in zip(a, b)]
-        )
+        res = all([are_equal(x, y) for x, y in zip(a, b)])
         return res
