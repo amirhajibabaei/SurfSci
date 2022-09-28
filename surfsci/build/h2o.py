@@ -30,6 +30,15 @@ def block_of_ice(
     lxlylz: tuple[float, float, float],
     ciel: tuple[bool, bool, bool] = (False, False, False),
 ):
+    """
+    It will generate a block of ice using the tetragonal
+    unit cell.
+
+    Args:
+        lxlylz:  target block lengths
+        ciel:    if True, it is allowed to surpass the
+                 length by a maximum of one unit cell
+    """
     uc = tetragonal_ice_unitcell()
     size = [
         int(np.ceil(l / u) if c else np.floor(l / u))
@@ -49,7 +58,18 @@ def unwrap_oh_bounds(atoms: Atoms, bmax: float = 1.2) -> None:
             b.position = a.position + r_mic
 
 
-def stack_h2o(atoms: Atoms, length: float, vacuum: float, ciel: bool = True) -> Atoms:
+def append_h2o(atoms: Atoms, length: float, vacuum: float, ciel: bool = True) -> Atoms:
+    """
+    Append a block of H2O molecules (tetragonal ice)
+    along the z axis of the given structure.
+
+    Args:
+        atoms:    input atoms (often a surface)
+        length:   target length of the ice block along z
+        vacuum:   vacuum on both sides of the ice block
+        ciel:     if True, size is allowed to exceed
+                  "length" by one unitcell of ice
+    """
     par = atoms.cell.cellpar()
     assert np.allclose(par[3:], 90)
 
