@@ -4,14 +4,15 @@ from __future__ import annotations
 from ase import Atoms
 from ase.build import surface as ase_surface, add_vacuum
 
-from .transform import right_angle_cell
+from .transform import right_angle_cell, conventional_cell
 from .h2o import append_h2o
 
 
 def surface(
     unitcell: Atoms,
-    indices: tuple[int, int, int] = (1, 1, 1),
+    indices: tuple[int, int, int] = (0, 0, 1),
     size: tuple[int, int, int] = (1, 1, 1),
+    conventional: bool = True,
     right_angle: bool = True,
     vacuum: float | None = None,
     h2o: float | None = None,
@@ -23,10 +24,12 @@ def surface(
     Optionally it can add H2O on top of the surface.
 
     Args:
-        unitcell:     unitcell Atoms object
-        indices:      miller indices
+        unitcell:     the unit-cell Atoms object
+        indices:      miller indices of the surface normal
+                      to the z axis
         size:         (nx, ny, nz) where nz is the number
                       of layers
+        conventional: if True, uses the conventional unit cell
         right_angle:  if True, ensures a cell with right angles
         vacuum:       optional vacuum on top of surface or between
                       the surface and water (if finite h2o)
@@ -39,6 +42,9 @@ def surface(
         also be specified.
 
     """
+    if conventional:
+        unitcell = conventional_cell(unitcell)
+
     atoms = ase_surface(
         lattice=unitcell,
         indices=indices,

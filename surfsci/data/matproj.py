@@ -24,6 +24,7 @@ special_structures = {
         ("mp-703459", "hexagonal", 185, None),
     ],
     "NaCl": [("mp-22851", "cubic", 221, None), ("mp-22862", "cubic", 225, "rocksalt")],
+    "AgI": [("mp-22894", "hexagonal", 186, "wurtzite")],
 }
 
 

@@ -1,5 +1,11 @@
 # +
+"""
+Warning: This module is deprecated.
+
+"""
 from __future__ import annotations
+
+import warnings
 
 from ase import Atoms
 from ase.build import surface, add_vacuum
@@ -7,6 +13,8 @@ from ase.spacegroup import crystal
 
 from .transform import right_angle_cell
 from .h2o import append_h2o
+
+warnings.warn("This module is deprecated")
 
 
 def nacl_unitcell(a: float | None = None) -> Atoms:
