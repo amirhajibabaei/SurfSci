@@ -54,12 +54,17 @@ def locally_identical(atoms1: Atoms, atoms2: Atoms, cutoff=5.0):
             # but the difference shouldn't be more than
             # one particle.
             assert abs(n1 - n2) < 2
-        return np.allclose(z1[:n], z2[:n]) and np.allclose(d1[:n], d2[:n])
+        numbers = np.allclose(z1[:n], z2[:n])
+        distances = np.allclose(d1[:n], d2[:n])
+        equal = distances and numbers
+        return equal
 
     if (atoms1.numbers != atoms2.numbers).any():
         return False
     else:
         a, nl = get_nntypes(atoms1, cutoff=cutoff)
         b, _ = get_nntypes(atoms2, nl=nl)
-        res = all([are_equal(x, y) for x, y in zip(a, b)])
-        return res
+        for x, y in zip(a, b):
+            if not are_equal(x, y):
+                return False
+        return True

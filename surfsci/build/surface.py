@@ -1,59 +1,35 @@
 # +
-"""
-Warning: This module is deprecated.
-
-"""
 from __future__ import annotations
 
-import warnings
-
 from ase import Atoms
-from ase.build import surface, add_vacuum
-from ase.spacegroup import crystal
+from ase.build import surface as ase_surface, add_vacuum
 
-from .transform import right_angle_cell
+from .transform import right_angle_cell, conventional_cell
 from .h2o import append_h2o
 
-warnings.warn("This module is deprecated")
 
-
-def nacl_unitcell(a: float | None = None) -> Atoms:
-    """
-    Creates a NaCl unit cell with spacegroup 225.
-
-    Args:
-        a:   optional lattice spacing (if None, a = 5.6402)
-
-    """
-    if a is None:
-        a = 5.6402
-    unitcell = crystal(
-        symbols=("Na", "Cl"),
-        basis=((0, 0, 0), (0.5, 0.5, 0.5)),
-        spacegroup=225,
-        cellpar=(a, a, a, 90, 90, 90),
-    )
-    return unitcell
-
-
-def nacl_surface(
-    a: float | None = None,
-    indices: tuple[int, int, int] = (1, 1, 1),
+def surface(
+    unitcell: Atoms,
+    indices: tuple[int, int, int] = (0, 0, 1),
     size: tuple[int, int, int] = (1, 1, 1),
+    conventional: bool = True,
     right_angle: bool = True,
     vacuum: float | None = None,
     h2o: float | None = None,
     periodic: bool = True,
 ) -> Atoms:
     """
-    Creates NaCl surface (based on spacegroup 225)
+    Creates a surface along the given miller indices
     where z-axis will be normal to the surface.
+    Optionally it can add H2O on top of the surface.
 
     Args:
-        a:            lattice spacing
-        indices:      miller indices
+        unitcell:     the unit-cell Atoms object
+        indices:      miller indices of the surface normal
+                      to the z axis
         size:         (nx, ny, nz) where nz is the number
                       of layers
+        conventional: if True, uses the conventional unit cell
         right_angle:  if True, ensures a cell with right angles
         vacuum:       optional vacuum on top of surface or between
                       the surface and water (if finite h2o)
@@ -66,8 +42,11 @@ def nacl_surface(
         also be specified.
 
     """
-    atoms = surface(
-        lattice=nacl_unitcell(a),
+    if conventional:
+        unitcell = conventional_cell(unitcell)
+
+    atoms = ase_surface(
+        lattice=unitcell,
         indices=indices,
         layers=size[2],
         periodic=periodic,
@@ -76,6 +55,7 @@ def nacl_surface(
 
     if right_angle:
         atoms = right_angle_cell(atoms)
+
     if h2o is not None:
         assert vacuum is not None
         atoms = append_h2o(atoms, h2o, vacuum)

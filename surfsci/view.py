@@ -3,7 +3,7 @@ import nglview as ngl
 from ase import Atoms
 
 
-def view(traj, radiusScale=1.0):
+def view(traj, radiusScale=0.7):
     if type(traj) == Atoms:
         traj = [traj]
     view = ngl.show_asetraj(traj)
