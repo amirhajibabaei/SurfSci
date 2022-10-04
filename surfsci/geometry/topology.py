@@ -1,4 +1,6 @@
 # +
+from __future__ import annotations
+
 from itertools import combinations
 from typing import Sequence
 
@@ -63,7 +65,7 @@ def find_angles(
     bonds: list[list[tuple[int, int]]],
     angle_types: Sequence[tuple[int, int, float]],
     rtol: float = 1.1,
-):
+) -> list[list[tuple[int, int, int]]]:
     """
     Args:
         atoms:        ase.Atoms object
@@ -99,3 +101,21 @@ def find_angles(
                         angles_a.append((t, b1[1], b2[1]))
         angles.append(angles_a)
     return angles
+
+
+def find_topology(
+    atoms: Atoms,
+    bond_types: Sequence[tuple[str, str, float]],
+    angle_types: Sequence[tuple[int, int, float]],
+    rtol: float | dict[str, float] = 0.1,
+) -> tuple[list[list[tuple[int, int]]], list[list[tuple[int, int, int]]]]:
+    if type(rtol) == float:
+        bonds_rtol = angles_rtol = rtol
+    elif type(rtol) == dict:
+        bonds_rtol = rtol["angles"]
+        angles_rtol = rtol["bonds"]
+    else:
+        raise RuntimeError
+    bonds = find_bonds(atoms, bond_types, bonds_rtol)
+    angles = find_angles(atoms, bonds, angle_types, angles_rtol)
+    return bonds, angles
