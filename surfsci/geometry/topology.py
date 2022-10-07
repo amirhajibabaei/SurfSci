@@ -14,7 +14,7 @@ from .nlutil import get_neighbors
 
 def find_bonds(
     atoms: Atoms, bond_types: Sequence[tuple[str, str, float]], rtol: float = 0.1
-) -> list[list[tuple[int, int]]]:
+) -> list[list[tuple[int, int, int]]]:
     """
     Args:
         atoms:        ase.Atoms object
@@ -25,15 +25,16 @@ def find_bonds(
         rtol:         relative tolerance for distance
 
     Returns:
-        a list of bonds for each atom.
+        a list of bonds for each atom:
         [
-            [(t1, j1), ...],   <- bonds connected to atom 0
-            [(t2, j2), ...],   <- bonds connected to atom 1
-                 ...                      etc.
+                ...
+            [(t1, i, j1), (t2, i, j2), ...], # bonds on atom i
+                ...
         ]
-        where a bond is encoded by tuple of (t, j) in which
-        t is the type of bond (index in bond_types) and
-        j is the index of the other atom in the bond.
+        where a bond is encoded by tuple of (t, i, j) in which
+        t is the type of bond (index in bond_types) and i, j
+        index of atoms in the bond. The index i is the same
+        for all bonds of atom i.
 
     """
     cutoff = (1 + rtol) * max([d for _, _, d in bond_types])
@@ -55,17 +56,17 @@ def find_bonds(
             if a.symbol == ba:
                 for j, d in nei:
                     if atoms[j].symbol == bb and in_range_rtol(d, bd, rtol):
-                        bonds_a.append((t, j))
+                        bonds_a.append((t, a.index, j))
         bonds.append(bonds_a)
     return bonds
 
 
 def find_angles(
     atoms: Atoms,
-    bonds: list[list[tuple[int, int]]],
+    bonds: list[list[tuple[int, int, int]]],
     angle_types: Sequence[tuple[int, int, float]],
     rtol: float = 1.1,
-) -> list[list[tuple[int, int, int]]]:
+) -> list[list[tuple[int, int, int, int]]]:
     """
     Args:
         atoms:        ase.Atoms object
@@ -80,13 +81,13 @@ def find_angles(
     Returns:
         a list of angles for each atom.
         [
-            [(t1, j1, k1), ...],   <- angle j1--0--k1
-            [(t2, j2, k2), ...],   <- bonds j2--1--k2
-                 ...                      etc.
+                ...
+            [(t1, j1, i, k1), (t2, j2, i, k2), ...], # angles on atom i
+                ...
         ]
-        where an angle is encoded by tuple of (t, j, k) in which
-        t is the type of angle (index in angle_types) and
-        j,k are the indices of two other atoms forming the angle.
+        where an angle is encoded by tuple of (t, j, i, k) in which
+        t is the type of angle (index in angle_types) and j, k are
+        the indices of two other atoms forming j--i--k angle.
 
     """
     angles = []
@@ -96,26 +97,17 @@ def find_angles(
             type_ = {b1[0], b2[0]}  # set
             for t, (bt1, bt2, angle) in enumerate(angle_types):
                 if {bt1, bt2} == type_:  # set equality
-                    angle_ = atoms.get_angle(b1[1], a, b2[1])
+                    angle_ = atoms.get_angle(b1[2], a, b2[2])
                     if in_range_rtol(angle, angle_, rtol):
-                        angles_a.append((t, b1[1], b2[1]))
+                        angles_a.append((t, b1[2], a, b2[2]))
         angles.append(angles_a)
     return angles
 
 
-def find_topology(
-    atoms: Atoms,
-    bond_types: Sequence[tuple[str, str, float]],
-    angle_types: Sequence[tuple[int, int, float]],
-    rtol: float | dict[str, float] = 0.1,
-) -> tuple[list[list[tuple[int, int]]], list[list[tuple[int, int, int]]]]:
-    if type(rtol) == float:
-        bonds_rtol = angles_rtol = rtol
-    elif type(rtol) == dict:
-        bonds_rtol = rtol["angles"]
-        angles_rtol = rtol["bonds"]
-    else:
-        raise RuntimeError
-    bonds = find_bonds(atoms, bond_types, bonds_rtol)
-    angles = find_angles(atoms, bonds, angle_types, angles_rtol)
-    return bonds, angles
+def find_topology(atoms: Atoms, topology: dict, rtol: float = 0.1) -> dict:
+    res: dict[str, list] = {"bond": [], "angle": []}
+    if "bond" in topology:
+        res["bond"] = find_bonds(atoms, topology["bond"], rtol)
+    if "angle" in topology:
+        res["angle"] = find_angles(atoms, res["bond"], topology["angle"], rtol)
+    return res
