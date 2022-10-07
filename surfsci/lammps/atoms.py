@@ -12,14 +12,18 @@ from ..geometry.rotations import PrismRotation
 from ..geometry.topology import find_topology
 
 
-def create_atoms(lmp: lammps, atoms: Atoms, topology: dict = None) -> None:
+def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
     """
     prerequisites:
         LAMMPS "units" must be defined before.
 
     """
 
-    units = lmp.extract_global("units")
+    lmp = lammps()
+
+    lmp.command(f"units {units}")
+    # units = lmp.extract_global("units")
+    lmp.command("atom_style full")
 
     # boundary conditions
     symbol = {True: "p", False: "f"}
@@ -44,17 +48,18 @@ def create_atoms(lmp: lammps, atoms: Atoms, topology: dict = None) -> None:
     lmp.command(f"region {region_id} prism  {prism} units box")
 
     # topology
-    box_topo = []
+    topologies = {}
+    _box_extra = []
     if topology is not None:
-        topo = find_topology(atoms, topology)
+        topologies = find_topology(atoms, topology)
         for a, b in topology.items():
-            c = max([len(c) for c in topo[a]])
-            box_topo.append(f"{a}/types {len(b)} extra/{a}/per/atom {c}")
-    box_kw = " ".join(box_topo)
+            c = max([len(at) for at in topologies[a]])
+            _box_extra.append(f"{a}/types {len(b)} extra/{a}/per/atom {c}")
+    box_extra = " ".join(_box_extra)
 
     # create box
     unique = np.unique(atoms.get_atomic_numbers())  # auto-sorted
-    lmp.command(f"create_box {len(unique)} {region_id} {box_kw}")
+    lmp.command(f"create_box {len(unique)} {region_id} {box_extra}")
 
     # create atoms
     mapping = {z: i + 1 for i, z in enumerate(unique)}
@@ -69,6 +74,18 @@ def create_atoms(lmp: lammps, atoms: Atoms, topology: dict = None) -> None:
         shrinkexceed=False,
     )
 
+    # create topologies
+    for style, atoms_ in topologies.items():
+        cmd = []
+        for atom_ in atoms_:
+            for top in atom_:
+                type_ = top[0] + 1
+                ind = " ".join(map(str, [i + 1 for i in top[1:]]))  # TODO: map indices
+                cmd.append(f"create_bonds single/{style} {type_} {ind} special no")
+        if len(cmd) > 0:
+            lmp.commands_list(cmd[:-1])
+            lmp.command(cmd[-1].replace("special no", "special yes"))
+
     # set masses
     for z, t in mapping.items():
         m = convert(atomic_masses[z], "mass", "ASE", units)
@@ -81,3 +98,5 @@ def create_atoms(lmp: lammps, atoms: Atoms, topology: dict = None) -> None:
 
     # set lmp attributes
     lmp._types_mapping = mapping
+
+    return lmp

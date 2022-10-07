@@ -13,17 +13,6 @@ def ff(lmp: lammps, atoms: Atoms, cutoff: float) -> None:
             "angle_style harmonic",
         ]
     )
-    for a in atoms:
-        if a.symbol == "O":
-            # LAMMPS ids start from 1
-            i = a.index + 1
-            lmp.commands_list(
-                [
-                    f"create_bonds single/bond 1 {i} {i+1}",
-                    f"create_bonds single/bond 1 {i} {i+2}",
-                    f"create_bonds single/angle 1 {i+1} {i} {i+2}",
-                ]
-            )
 
 
 def ff_coef(lmp: lammps) -> None:

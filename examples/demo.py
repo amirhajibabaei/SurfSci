@@ -2,11 +2,9 @@
 """
 This is a work in progress.
 """
-from lammps import lammps
-
 import surfsci.lammps.forcefields.demo_nacl as ff
 from surfsci.build.nacl import nacl_surface
-from surfsci.lammps.atoms import create_atoms
+from surfsci.lammps.atoms import atoms_to_lmp
 
 
 def main() -> None:
@@ -19,10 +17,7 @@ def main() -> None:
         "bond": [("O", "H", 1.0)],
         "angle": [(0, 0, 105.26)],
     }
-    lmp = lammps()
-    lmp.command("units real")
-    lmp.command("atom_style full")
-    create_atoms(lmp, atoms, topology=topology)
+    lmp = atoms_to_lmp(atoms, topology=topology)
     ff.ff(lmp, atoms, cutoff)
     ff.ff_coef(lmp)
 
