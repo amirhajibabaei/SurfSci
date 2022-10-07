@@ -8,10 +8,11 @@ from ase.data import atomic_masses, atomic_names
 from ase.geometry import wrap_positions
 from lammps import lammps
 
-from surfsci.geometry.rotations import PrismRotation
+from ..geometry.rotations import PrismRotation
+from ..geometry.topology import find_topology
 
 
-def create_atoms(lmp: lammps, atoms: Atoms, box_kw: dict = None) -> None:
+def create_atoms(lmp: lammps, atoms: Atoms, topology: dict = None) -> None:
     """
     prerequisites:
         LAMMPS "units" must be defined before.
@@ -42,9 +43,18 @@ def create_atoms(lmp: lammps, atoms: Atoms, box_kw: dict = None) -> None:
     prism = "0 {} 0 {} 0 {}  {} {} {}".format(*lower)
     lmp.command(f"region {region_id} prism  {prism} units box")
 
+    # topology
+    box_topo = []
+    if topology is not None:
+        topo = find_topology(atoms, topology)
+        for a, b in topology.items():
+            c = max([len(c) for c in topo[a]])
+            box_topo.append(f"{a}/types {len(b)} extra/{a}/per/atom {c}")
+    box_kw = " ".join(box_topo)
+
     # create box
     unique = np.unique(atoms.get_atomic_numbers())  # auto-sorted
-    lmp.command(f"create_box {len(unique)} {region_id} {_box(box_kw)}")
+    lmp.command(f"create_box {len(unique)} {region_id} {box_kw}")
 
     # create atoms
     mapping = {z: i + 1 for i, z in enumerate(unique)}
@@ -71,18 +81,3 @@ def create_atoms(lmp: lammps, atoms: Atoms, box_kw: dict = None) -> None:
 
     # set lmp attributes
     lmp._types_mapping = mapping
-
-
-def _box(kw: None | dict[str, int | tuple[int, int]]) -> str:
-    if kw is None:
-        return ""
-
-    x = []
-    for k, v in kw.items():
-        if type(v) == int:
-            x.append(f"{k}/types {v}")
-        elif type(v) == tuple:
-            v1, v2 = v
-            x.append(f"{k}/types {v1}")
-            x.append(f"extra/{k}/per/atom {v2}")
-    return " ".join(x)

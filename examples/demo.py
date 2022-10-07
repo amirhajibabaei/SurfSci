@@ -15,10 +15,14 @@ def main() -> None:
 
     # make LAMMPS object
     cutoff = 10.0
+    topology = {
+        "bond": [("O", "H", 1.0)],
+        "angle": [(0, 0, 105.26)],
+    }
     lmp = lammps()
     lmp.command("units real")
     lmp.command("atom_style full")
-    create_atoms(lmp, atoms, box_kw=dict(bond=(1, 2), angle=(1, 1)))
+    create_atoms(lmp, atoms, topology=topology)
     ff.ff(lmp, atoms, cutoff)
     ff.ff_coef(lmp)
 
