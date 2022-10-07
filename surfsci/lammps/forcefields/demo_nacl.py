@@ -39,7 +39,7 @@ def ff_coef(lmp: lammps) -> None:
         "Cl": (0.012785, 4.8305),
     }
 
-    charge = {"O": -0.8476, "H": 0.4238, "Na": -1, "Cl": 1}
+    charge = {"O": -0.8476, "H": 0.4238, "Na": 1, "Cl": -1}
 
     for z, t in lmp._types_mapping.items():
         e = chemical_symbols[z]

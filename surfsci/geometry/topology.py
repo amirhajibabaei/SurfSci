@@ -103,19 +103,10 @@ def find_angles(
     return angles
 
 
-def find_topology(
-    atoms: Atoms,
-    bond_types: Sequence[tuple[str, str, float]],
-    angle_types: Sequence[tuple[int, int, float]],
-    rtol: float | dict[str, float] = 0.1,
-) -> tuple[list[list[tuple[int, int]]], list[list[tuple[int, int, int]]]]:
-    if type(rtol) == float:
-        bonds_rtol = angles_rtol = rtol
-    elif type(rtol) == dict:
-        bonds_rtol = rtol["angles"]
-        angles_rtol = rtol["bonds"]
-    else:
-        raise RuntimeError
-    bonds = find_bonds(atoms, bond_types, bonds_rtol)
-    angles = find_angles(atoms, bonds, angle_types, angles_rtol)
-    return bonds, angles
+def find_topology(atoms: Atoms, topology: dict, rtol: float = 0.1) -> dict:
+    res: dict[str, list] = {"bond": [], "angle": []}
+    if "bond" in topology:
+        res["bond"] = find_bonds(atoms, topology["bond"], rtol)
+    if "angle" in topology:
+        res["angle"] = find_angles(atoms, res["bond"], topology["angle"], rtol)
+    return res
