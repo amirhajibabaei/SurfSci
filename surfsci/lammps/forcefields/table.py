@@ -36,7 +36,7 @@ def tabular(
     if kwargs is None:
         kwargs = {}
 
-    r = np.arange(rmin, rmax, dr)
+    r = np.arange(rmin, rmax + 1e-8, dr)
     e, f = function(r, *args, **kwargs)
 
     c = -1
@@ -66,7 +66,7 @@ def write_table(file, tab, units=None):
             i = np.arange(1, N + 1)
             data = np.c_[i, r, e, f]
             key = "_".join(pair)
-            keys[pair] = key
+            keys[pair] = (key, N)
             of.write(f"\n{key}")
             of.write(f"\nN {N}\n\n")
             np.savetxt(of, data, fmt=("%10d", "%.18e", "%.18e", "%.18e"))
