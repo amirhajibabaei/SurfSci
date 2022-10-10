@@ -2,6 +2,22 @@
 from io import StringIO
 
 import numpy as np
+from ase.calculators.lammps import convert
+
+
+def create_table(function, pairs, units_in, units_out=None, file=None, **kwargs):
+    if units_out is None:
+        units_out = units_in
+    table = {}
+    for pair, args in pairs.items():
+        r, e, f = tabular(function, args, **kwargs)
+        r = convert(r, "distance", units_in, units_out)
+        e = convert(e, "energy", units_in, units_out)
+        f = convert(f, "force", units_in, units_out)
+        table[pair] = (r, e, f)
+    if file is not None:
+        write_table(file, table, units=units_out)
+    return table
 
 
 def tabular(
@@ -91,7 +107,7 @@ def _read_sections(sections):
     out = {}
     for sec in sections:
         key, data = _read_section(sec)
-        out[key] = data
+        out[key] = tuple(data[:, k] for k in range(1, 4))
     return out
 
 
