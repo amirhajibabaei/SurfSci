@@ -16,8 +16,8 @@ def create_table(function, pairs, units_in, units_out=None, file=None, **kwargs)
         f = convert(f, "force", units_in, units_out)
         table[pair] = (r, e, f)
     if file is not None:
-        write_table(file, table, units=units_out)
-    return table
+        keys = write_table(file, table, units=units_out)
+    return table, keys
 
 
 def tabular(
@@ -60,13 +60,17 @@ def write_table(file, tab, units=None):
         if units is not None:
             of.write(f"# UNITS: {units}\n")
         # body
+        keys = {}
         for pair, (r, e, f) in tab.items():
             N = r.shape[0]
             i = np.arange(1, N + 1)
             data = np.c_[i, r, e, f]
-            of.write(f"\n{pair}")
+            key = "_".join(pair)
+            keys[pair] = key
+            of.write(f"\n{key}")
             of.write(f"\nN {N}\n\n")
             np.savetxt(of, data, fmt=("%10d", "%.18e", "%.18e", "%.18e"))
+    return keys
 
 
 def _read_blocks(path):
@@ -96,6 +100,7 @@ def _read_section(section):
     head, data = section
     assert len(head) == 2, "needs generalization!"
     key = head[0].split()[0]
+    key = tuple(key.split("_"))
     N, n = head[1].split()
     assert N == "N", "needs generalization!"
     val = np.loadtxt(StringIO("".join(data)))
