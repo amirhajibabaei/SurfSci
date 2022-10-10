@@ -4,6 +4,40 @@ from io import StringIO
 import numpy as np
 
 
+def tabular(
+    function,
+    args=None,
+    kwargs=None,
+    rmin=0.1,
+    rmax=10.0,
+    dr=0.01,
+    cutoff=None,
+    shift=True,
+):
+
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+
+    r = np.arange(rmin, rmax, dr)
+    e, f = function(r, *args, **kwargs)
+
+    c = -1
+    if cutoff is not None:
+        c = np.argmin(abs(r - cutoff))
+
+    if shift:
+        e -= e[c]
+        f -= f[c]
+
+    if cutoff is not None:
+        e[c:] = 0
+        f[c:] = 0
+
+    return r, e, f
+
+
 def write_table(file, tab, units=None):
     with open(file, "w") as of:
         # header
