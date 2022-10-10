@@ -4,6 +4,21 @@ from io import StringIO
 import numpy as np
 
 
+def write_table(file, tab, units=None):
+    with open(file, "w") as of:
+        # header
+        if units is not None:
+            of.write(f"# UNITS: {units}\n")
+        # body
+        for pair, (r, e, f) in tab.items():
+            N = r.shape[0]
+            i = np.arange(1, N + 1)
+            data = np.c_[i, r, e, f]
+            of.write(f"\n{pair}")
+            of.write(f"\nN {N}\n\n")
+            np.savetxt(of, data, fmt=("%10d", "%.18e", "%.18e", "%.18e"))
+
+
 def _read_blocks(path):
     with open(path) as of:
         blocks = [[]]
