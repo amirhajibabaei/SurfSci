@@ -13,24 +13,43 @@ from ..geometry.topology import find_topology
 from .commands import mass_commands
 
 
-def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
+class Wlammps:
+    def __init__(self, lmp: lammps) -> None:
+        self.lmp = lmp
+        self.create_atoms = lmp.create_atoms
+        self.extract_global = lmp.extract_global
+
+        self.history: list[str | list[str]] = []
+        self._num_types: dict[int, int]
+        self._chem_types: dict[str, int]
+
+    def commands_list(self, cmds: list[str], save=True) -> None:
+        if save:
+            self.history.append(cmds)
+        self.lmp.commands_list(cmds)
+
+    def command(self, cmd: str, save=True) -> None:
+        if save:
+            self.history.append(cmd)
+        self.lmp.command(cmd)
+
+
+def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
     """
     TODO: doc
 
     """
 
     # units = lmp.extract_global("units")
-    lmp = lammps()
-    lmp._cmds = []
+    lmp = Wlammps(lammps())
 
     # units and style
-    lmp._cmds.append(
+    lmp.commands_list(
         [
             f"units {units}",
             "atom_style full",
         ]
     )
-    lmp.commands_list(lmp._cmds[-1])
 
     # boundary conditions
     symbol = {True: "p", False: "f"}
@@ -98,7 +117,6 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
     lmp._chem_types = {chemical_symbols[z]: t for z, t in mapping.items()}
 
     # set masses
-    lmp._cmds.append(mass_commands(lmp._chem_types, units))
-    lmp.commands_list(lmp._cmds[-1])
+    lmp.commands_list(mass_commands(lmp._chem_types, units))
 
     return lmp
