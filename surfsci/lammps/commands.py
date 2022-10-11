@@ -4,6 +4,9 @@ from __future__ import annotations
 import itertools as it
 from typing import Any, Sequence
 
+from ase.calculators.lammps import convert
+from ase.data import atomic_masses, atomic_numbers
+
 
 def pair_coef_commands(
     types: dict[str, int],
@@ -62,3 +65,12 @@ def set_commands(
     quantity: str, types: dict[str, int], values: dict[str, Any]
 ) -> list[str]:
     return [f"set type {t} {quantity} {values[a]}" for a, t in types.items()]
+
+
+def mass_commands(types: dict[str, int], units) -> list[str]:
+    cmds = []
+    for e, t in types.items():
+        m_ase = atomic_masses[atomic_numbers[e]]
+        m = convert(m_ase, "mass", "ASE", units)
+        cmds.append(f"mass {t} {m}   # {e}")
+    return cmds

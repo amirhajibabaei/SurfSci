@@ -4,26 +4,33 @@ from __future__ import annotations
 import numpy as np
 from ase import Atoms
 from ase.calculators.lammps import convert
-from ase.data import atomic_masses, chemical_symbols
+from ase.data import chemical_symbols
 from ase.geometry import wrap_positions
 from lammps import lammps
 
 from ..geometry.rotations import PrismRotation
 from ..geometry.topology import find_topology
+from .commands import mass_commands
 
 
 def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
     """
-    prerequisites:
-        LAMMPS "units" must be defined before.
+    TODO: doc
 
     """
 
-    lmp = lammps()
-
-    lmp.command(f"units {units}")
     # units = lmp.extract_global("units")
-    lmp.command("atom_style full")
+    lmp = lammps()
+    lmp._cmds = []
+
+    # units and style
+    lmp._cmds.append(
+        [
+            f"units {units}",
+            "atom_style full",
+        ]
+    )
+    lmp.commands_list(lmp._cmds[-1])
 
     # boundary conditions
     symbol = {True: "p", False: "f"}
@@ -86,13 +93,12 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
             lmp.commands_list(cmd[:-1])
             lmp.command(cmd[-1].replace("special no", "special yes"))
 
-    # set masses
-    for z, t in mapping.items():
-        m = convert(atomic_masses[z], "mass", "ASE", units)
-        lmp.command(f"mass {t} {m}")
-
     # set lmp attributes
     lmp._num_types = mapping
     lmp._chem_types = {chemical_symbols[z]: t for z, t in mapping.items()}
+
+    # set masses
+    lmp._cmds.append(mass_commands(lmp._chem_types, units))
+    lmp.commands_list(lmp._cmds[-1])
 
     return lmp
