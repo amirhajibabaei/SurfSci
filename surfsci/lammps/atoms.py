@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 from ase import Atoms
 from ase.calculators.lammps import convert
-from ase.data import atomic_masses, atomic_names
+from ase.data import atomic_masses, chemical_symbols
 from ase.geometry import wrap_positions
 from lammps import lammps
 
@@ -91,12 +91,8 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> lammps:
         m = convert(atomic_masses[z], "mass", "ASE", units)
         lmp.command(f"mass {t} {m}")
 
-    # log
-    lmp.command("""print "\ntype -> atom" """)
-    for z, t in mapping.items():
-        lmp.command(f"""print "{t} -> {z} ({atomic_names[z]})" """)
-
     # set lmp attributes
-    lmp._types_mapping = mapping
+    lmp._num_types = mapping
+    lmp._chem_types = {chemical_symbols[z]: t for z, t in mapping.items()}
 
     return lmp

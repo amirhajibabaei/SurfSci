@@ -1,6 +1,5 @@
 # +
 from ase import Atoms
-from ase.data import chemical_symbols
 from lammps import lammps
 
 
@@ -30,8 +29,7 @@ def ff_coef(lmp: lammps) -> None:
 
     charge = {"O": -0.8476, "H": 0.4238, "Na": 1, "Cl": -1}
 
-    for z, t in lmp._types_mapping.items():
-        e = chemical_symbols[z]
+    for e, t in lmp._chem_types.items():
         eps, sig = lj[e]
         lmp.command(f"pair_coeff {t} {t} {eps} {sig}")
         lmp.command(f"set type {t} charge {charge[e]}")
