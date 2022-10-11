@@ -109,5 +109,24 @@ def find_topology(atoms: Atoms, topology: dict, rtol: float = 0.1) -> dict:
     if "bond" in topology:
         res["bond"] = find_bonds(atoms, topology["bond"], rtol)
     if "angle" in topology:
-        res["angle"] = find_angles(atoms, res["bond"], topology["angle"], rtol)
+        angles = _angles(topology)
+        res["angle"] = find_angles(atoms, res["bond"], angles, rtol)
     return res
+
+
+def _angles(topology):
+    """
+    angles expressed with bond indices.
+    """
+    angles = []
+    for a, b, c, ang in topology["angle"]:
+        for i, (p, q, _) in enumerate(topology["bond"]):
+            if {p, q} == {a, b}:
+                ab = i
+            if {p, q} == {b, c}:
+                bc = i
+        try:
+            angles.append((ab, bc, ang))
+        except UnboundLocalError:
+            raise RuntimeError("incomplete topology!")
+    return angles
