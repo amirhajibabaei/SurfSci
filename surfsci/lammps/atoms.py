@@ -31,8 +31,28 @@ class Wlammps:
 
     def command(self, cmd: str, save=True) -> None:
         if save:
-            self.history.append(cmd)
+            self.history.append([cmd])
         self.lmp.command(cmd)
+
+    def forcefield(self, styles, coeffs, consts):
+        units = self.extract_global("units")
+        self.commands_list(styles(units))
+        self.command("# write_data")
+        bonds = {b[:2]: self._type(*b[:2]) for b in self._topology["bond"]}
+        angles = {b[:3]: self._type(*b[:3]) for b in self._topology["angle"]}
+        self.commands_list(coeffs(units, self._chem_types, bonds, angles))
+        self.commands_list(consts(bonds, angles))
+
+    def generate_input_files(self):
+        with open("in.lammps", "w") as of:
+            for b in self.history:
+                of.write("\n")
+                for l in b:
+                    if l.startswith("# write_data"):
+                        self.lmp.command("write_data box.in")
+                        of.write("\nread_data box.in\n")
+                    else:
+                        of.write(l + "\n")
 
     def _bond_type(self, a: str, b: str) -> int:
         if self._topology is not None:
@@ -79,7 +99,7 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
     # boundary conditions
     symbol = {True: "p", False: "f"}
     boundary = " ".join([symbol[b] for b in atoms.pbc])
-    lmp.command(f"boundary {boundary}")
+    lmp.command(f"boundary {boundary}", save=False)
 
     # rotate coordinates to LAMMPS "prism" style (most generic)
     # TODO: consider checks for simpler "block" style
@@ -96,7 +116,7 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
     region_id = "cell"
     lower = cell.flat[[0, 4, 8, 3, 6, 7]]
     prism = "0 {} 0 {} 0 {}  {} {} {}".format(*lower)
-    lmp.command(f"region {region_id} prism  {prism} units box")
+    lmp.command(f"region {region_id} prism  {prism} units box", save=False)
 
     # topology
     topologies = {}
@@ -110,7 +130,7 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
 
     # create box
     unique = np.unique(atoms.get_atomic_numbers())  # auto-sorted
-    lmp.command(f"create_box {len(unique)} {region_id} {box_extra}")
+    lmp.command(f"create_box {len(unique)} {region_id} {box_extra}", save=False)
 
     # create atoms
     mapping = {z: i + 1 for i, z in enumerate(unique)}
@@ -134,8 +154,8 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
                 ind = " ".join(map(str, [i + 1 for i in top[1:]]))  # TODO: map indices
                 cmd.append(f"create_bonds single/{style} {type_} {ind} special no")
         if len(cmd) > 0:
-            lmp.commands_list(cmd[:-1])
-            lmp.command(cmd[-1].replace("special no", "special yes"))
+            lmp.commands_list(cmd[:-1], save=False)
+            lmp.command(cmd[-1].replace("special no", "special yes"), save=False)
 
     # set lmp attributes
     lmp._num_types = mapping
@@ -143,6 +163,7 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
     lmp._topology = topology
 
     # set masses
-    lmp.commands_list(mass_commands(lmp._chem_types, units))
+    lmp.commands_list(mass_commands(lmp._chem_types, units), save=False)
+    lmp.commands_list([f"# {e}: {t}" for e, t in lmp._chem_types.items()])
 
     return lmp

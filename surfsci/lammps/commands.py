@@ -10,8 +10,8 @@ from ase.data import atomic_masses, atomic_numbers
 
 def pair_coef_commands(
     types: dict[str, int],
-    coef: dict[str | tuple[str, str], Any],
-    explicit_zeros: bool = True,
+    coef: dict[str | tuple[str, str], tuple[float, ...]],
+    zero_missing: bool = False,
     pair_style: str | None = None,
 ):
 
@@ -53,7 +53,7 @@ def pair_coef_commands(
             c_seq = (c,)
         c_str = " ".join(map(str, c_seq))
         cmds.append(f"pair_coeff {n} {m} {pair_style} {c_str}")
-    if explicit_zeros:
+    if zero_missing:
         # c is the last of the previous for-loop
         c_str = " ".join(("0" for _ in c))
         for n, m in null:

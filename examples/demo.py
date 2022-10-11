@@ -15,7 +15,7 @@ def main() -> None:
     cutoff = 10.0
     topology = {
         "bond": [("O", "H", 1.0)],
-        "angle": [(0, 0, 105.26)],
+        "angle": [("H", "O", "H", 105.26)],
     }
     lmp = atoms_to_lmp(atoms, topology=topology)
     ff.ff(lmp, atoms, cutoff)
