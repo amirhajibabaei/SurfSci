@@ -22,6 +22,7 @@ class Wlammps:
         self.history: list[str | list[str]] = []
         self._num_types: dict[int, int]
         self._chem_types: dict[str, int]
+        self._topology: dict | None
 
     def commands_list(self, cmds: list[str], save=True) -> None:
         if save:
@@ -32,6 +33,30 @@ class Wlammps:
         if save:
             self.history.append(cmd)
         self.lmp.command(cmd)
+
+    def _bond_type(self, a: str, b: str) -> int:
+        if self._topology is not None:
+            for i, x in enumerate(self._topology["bond"]):
+                if set(x[:-1]) == set((a, b)):
+                    return i + 1
+        return 0
+
+    def _angle_type(self, a: str, b: str, c: str) -> int:
+        if self._topology is not None:
+            for i, x in enumerate(self._topology["angle"]):
+                if tuple(x[:-1]) == (a, b, c):
+                    return i + 1
+        return 0
+
+    def _type(self, *at: str) -> int:
+        if len(at) == 1:
+            return self._chem_types[at[0]]
+        elif len(at) == 2:
+            return self._bond_type(*at)
+        elif len(at) == 3:
+            return self._angle_type(*at)
+        else:
+            return 0
 
 
 def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
@@ -115,6 +140,7 @@ def atoms_to_lmp(atoms: Atoms, topology: dict = None, units="real") -> Wlammps:
     # set lmp attributes
     lmp._num_types = mapping
     lmp._chem_types = {chemical_symbols[z]: t for z, t in mapping.items()}
+    lmp._topology = topology
 
     # set masses
     lmp.commands_list(mass_commands(lmp._chem_types, units))
